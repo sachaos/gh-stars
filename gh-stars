@@ -1,0 +1,96 @@
+#!/bin/bash
+set -e
+
+cd $(dirname $0)
+
+VERSION=v0.0.5
+OWNER=sachaos
+REPO=go-starz
+
+function error() {
+    printf "\033[33m${1}\033[m\n"
+}
+
+function unsupported_repo() {
+    error "${1}"
+    error "Unfortunately, your environment is not supported now."
+    error "Please contribute to work on your environment."
+    exit 1
+}
+
+function unsupported_script() {
+    error "${1}"
+    error "Unfortunately, your environment is not supported now."
+    error "Please contribute to work on your environment."
+    exit 1
+}
+
+function detect_goos() {
+    case "$OSTYPE" in
+    solaris*) echo "solaris" ;;
+    darwin*) echo "darwin" ;;
+    linux*) echo "linux" ;;
+    bsd*) echo "freebsd" ;;
+    msys*) echo "windows" ;;
+    cygwin*) echo "windows" ;;
+    *) echo "Error: unknown os: $OSTYPE" ;;
+    esac
+}
+
+function detect_goarch() {
+    ARCH=$(uname -m)
+    case "$ARCH" in
+    x86_64) echo "amd64" ;;
+    i386) echo "386" ;;
+    arm64) echo "arm64" ;;
+    arm) echo "arm" ;;
+    *) echo "Error: unknown arch: $ARCH" ;;
+    esac
+}
+
+function download_archive() {
+    url=https://github.com/${OWNER}/${REPO}/releases/download/${VERSION}/${REPO}_${VERSION:1}_${GOOS}_${GOARCH}.tar.gz
+    if command -v curl &>/dev/null; then
+        curl -sL $url -o ${tar_path}
+        return
+    fi
+
+    if command -v curl &>/dev/null; then
+        wget -q $url -O ${tar_path}
+        return
+    fi
+
+    unsupported_script "cannot find wget or curl command"
+}
+
+function extract_archive() {
+    if ! command -v tar &>/dev/null; then
+        unsupported_script "cannot find tar command"
+    fi
+
+    tar xf $tar_path -C ${temp_dir}
+    mv ${temp_dir}/${REPO} $binary_path
+}
+
+GOOS=$(detect_goos)
+GOARCH=$(detect_goarch)
+
+if [[ $GOOS == "Error"* ]]; then
+    unsupported_script "$GOOS"
+fi
+
+if [[ $GOARCH == "Error"* ]]; then
+    unsupported_script "$GOARCH"
+fi
+
+binary_path=./${REPO}_${VERSION}_${GOOS}_${GOARCH}
+
+if [ ! -e $binary_path ]; then
+    temp_dir=$(mktemp -d)
+    tar_path=${temp_dir}/${REPO}_${VERSION:1}_${GOOS}_${GOARCH}.tar.gz
+
+    download_archive
+    extract_archive
+fi
+
+exec ./${binary_path} "$@"
