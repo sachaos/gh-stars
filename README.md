@@ -7,7 +7,7 @@ This extension display the counts of GitHub stars.
 ## Install
 
 ```
-gh extension install sachaos/star
+gh extension install sachaos/go-stars
 ```
 
 ## Demo
